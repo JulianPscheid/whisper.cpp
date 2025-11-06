@@ -201,6 +201,10 @@ target_include_directories(parakeet PUBLIC . ../include)
 target_compile_features   (parakeet PUBLIC cxx_std_11)
 target_link_libraries(parakeet PUBLIC ggml Threads::Threads)
 
+if (DEFINED HEDY_BINDINGS_SRC)
+    target_sources(whisper PRIVATE ${HEDY_BINDINGS_SRC})
+endif()
+
 # Set the version numbers
 set_target_properties(whisper PROPERTIES
     VERSION ${WHISPER_VERSION_BASE}
