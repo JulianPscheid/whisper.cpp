@@ -42,6 +42,9 @@ COMMON_CMAKE_ARGS=(
     -DGGML_OPENMP=${GGML_OPENMP}
 )
 
+HEDY_BINDINGS_PATH="$(cd ..; pwd)/hedy_bindings.cpp"
+COMMON_CMAKE_ARGS+=(-DHEDY_BINDINGS_SRC=${HEDY_BINDINGS_PATH})
+
 XCODE_VERSION=$(xcodebuild -version 2>/dev/null | head -n1 | awk '{ print $2 }')
 MAJOR_VERSION=$(echo $XCODE_VERSION | cut -d. -f1)
 MINOR_VERSION=$(echo $XCODE_VERSION | cut -d. -f2)
