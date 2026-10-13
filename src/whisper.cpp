@@ -7962,6 +7962,8 @@ int whisper_full(
         }
         samples = vad_samples.data();
         n_samples = vad_samples.size();
+    } else {
+        ctx->state->has_vad_segments = false;
     }
     return whisper_full_with_state(ctx, ctx->state, params, samples, n_samples);
 }
@@ -7989,6 +7991,8 @@ int whisper_full_parallel(
         }
         samples = vad_samples.data();
         n_samples = vad_samples.size();
+    } else {
+        ctx->state->has_vad_segments = false;
     }
     int ret = 0;
 
@@ -8797,6 +8801,17 @@ static void whisper_exp_compute_token_level_timestamps(
         return;
     }
 
+    // Hedy: with VAD off, a decoder timestamp can store t1 past the request.
+    // Clamp the segment before the fill. The energy walk adds segment.t0 back
+    // onto a sample index and can pass cap again, so token t0/t1 are capped
+    // a second time after that walk. Skip both when has_vad_segments: those
+    // times are on the concatenated-speech timeline.
+    const int64_t cap = (100ll * n_samples) / WHISPER_SAMPLE_RATE;
+    if (!state.has_vad_segments) {
+        segment.t0 = std::min(segment.t0, cap);
+        segment.t1 = std::max(segment.t0, std::min(segment.t1, cap));
+    }
+
     const int64_t t0 = segment.t0;
     const int64_t t1 = segment.t1;
 
@@ -8978,6 +8993,14 @@ static void whisper_exp_compute_token_level_timestamps(
                     tokens[j].t1 = sample_to_timestamp(k, segment.t0);
                 }
             }
+        }
+    }
+
+    // Hedy: cap tokens after the energy walk, which can push them past EOF again.
+    if (!state.has_vad_segments) {
+        for (auto & token : tokens) {
+            token.t0 = std::min(token.t0, cap);
+            token.t1 = std::min(token.t1, cap);
         }
     }
 
